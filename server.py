@@ -1,3 +1,4 @@
+#Contains the code for the simple web server with the /home and /heartbeat endpoints. (TASK  1)
 from flask import Flask
 
 app = Flask(__name__)
