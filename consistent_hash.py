@@ -1,3 +1,9 @@
+#Implement a consistent hash map data structure using the provided parameters:
+# - Number of server containers (N) = 3
+#- Total slots in hash map = 512 
+#- Number of virtual servers per container (K) = log2(512) = 9
+#- Hash functions: H(i) = (i^2 + 2i + 17) % 512, Φ(i, j) = (i + j + 2j + 25) % 512
+
 N = 3  # Number of server containers
 num_slots = 512  # Total slots in the hash map
 K = 9  # Number of virtual servers per container
