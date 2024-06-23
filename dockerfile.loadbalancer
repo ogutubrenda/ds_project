@@ -1,0 +1,14 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY load_balancer.py .
+
+# Install Flask
+RUN pip install flask requests
+
+# Expose the port the load balancer will run on
+EXPOSE 5000
+
+# Command to run the load balancer
+CMD ["python", "load_balancer.py"]
