@@ -1,54 +1,92 @@
 from flask import Flask, request, jsonify
-from consistent_hash import ConsistentHash
 import docker
+from consistent_hash import ConsistentHashMap  # Assuming ConsistentHashMap is implemented in consistent_hash.py
 
 app = Flask(__name__)
-ch = ConsistentHash()
 client = docker.from_env()
 
-N = 3  # Initial number of servers
-servers = [f'Server{i+1}' for i in range(N)]
-for server in servers:
-    ch.add_node(server)
+# Example parameters for consistent hashing
+num_servers = 10
+num_slots = 100
+num_virtual_servers = 1
+
+hash_ring = ConsistentHashMap(num_servers, num_slots, num_virtual_servers)
+
+servers = []
+
+def start_server(server_id):
+    container = client.containers.run(
+        "web_server",
+        environment={"SERVER_ID": server_id},
+        detach=True,
+        name=server_id
+    )
+    return container
+
+def stop_server(container):
+    container.stop()
+    container.remove()
 
 @app.route('/rep', methods=['GET'])
 def get_replicas():
-    return jsonify({"N": len(ch.nodes)//ch.num_virtual_nodes, "replicas": list(ch.nodes.values())})
+    return jsonify({
+        "N": len(servers),
+        "replicas": servers
+    }), 200
 
 @app.route('/add', methods=['POST'])
 def add_replicas():
     data = request.json
-    num_instances = data['n']
-    hostnames = data.get('hostnames', [])
-    if len(hostnames) > num_instances:
-        return jsonify({"message": "Error: Length of hostname list is more than newly added instances", "status": "failure"}), 400
+    num_instances = data.get("n", 1)
+    hostnames = data.get("hostnames", [])
+
+    new_servers = []
     for i in range(num_instances):
-        hostname = hostnames[i] if i < len(hostnames) else f"Server{len(ch.nodes)//ch.num_virtual_nodes + 1}"
-        ch.add_node(hostname)
-        # Code to spawn a new Docker container can be added here
-    return jsonify({"message": {"N": len(ch.nodes)//ch.num_virtual_nodes, "replicas": list(ch.nodes.values())}, "status": "successful"})
+        server_id = hostnames[i] if i < len(hostnames) else f"Server_{len(servers) + i + 1}"
+        container = start_server(server_id)
+        hash_ring.add_server(server_id)
+        servers.append(server_id)
+        new_servers.append(server_id)
+    
+    return jsonify({
+        "message": {
+            "N": len(servers),
+            "replicas": servers
+        },
+        "status": "successful"
+    }), 200
 
 @app.route('/rm', methods=['DELETE'])
 def remove_replicas():
     data = request.json
-    num_instances = data['n']
-    hostnames = data.get('hostnames', [])
-    if len(hostnames) > num_instances:
-        return jsonify({"message": "Error: Length of hostname list is more than removable instances", "status": "failure"}), 400
-    for i in range(num_instances):
-        hostname = hostnames[i] if i < len(hostnames) else None
-        if hostname:
-            ch.remove_node(hostname)
-            # Code to remove Docker container can be added here
-    return jsonify({"message": {"N": len(ch.nodes)//ch.num_virtual_nodes, "replicas": list(ch.nodes.values())}, "status": "successful"})
+    num_instances = data.get("n", 1)
+    hostnames = data.get("hostnames", [])
 
-@app.route('/<path>', methods=['GET'])
-def route_request(path):
-    server = ch.get_node(path)
-    if server:
-        # Code to forward the request to the chosen server
-        return jsonify({"message": f"Routed to {server}", "status": "successful"}), 200
-    return jsonify({"message": f"Error: '{path}' endpoint does not exist in server replicas", "status": "failure"}), 400
+    for i in range(num_instances):
+        if hostnames and i < len(hostnames):
+            server_id = hostnames[i]
+        else:
+            server_id = servers.pop()
+        
+        hash_ring.remove_server(server_id)
+        container = client.containers.get(server_id)
+        stop_server(container)
+        servers.remove(server_id)
+    
+    return jsonify({
+        "message": {
+            "N": len(servers),
+            "replicas": servers
+        },
+        "status": "successful"
+    }), 200
+
+@app.route('/<path:path>', methods=['GET'])
+def proxy_request(path):
+    server_id = hash_ring.get_server(path)
+    server_container = client.containers.get(server_id)
+    # You will need to implement the request forwarding logic here.
+    return jsonify({"message": f"Request forwarded to {server_id}"}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
