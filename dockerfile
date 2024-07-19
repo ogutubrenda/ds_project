@@ -6,4 +6,4 @@ COPY load_balancer.py consistent_hash.py /app/
 
 RUN pip install flask docker
 
-CMD ["python", "load_balancer.py"]
+CMD [ "python", "./app.py", "&", "python", "./load_balancer.py" ]

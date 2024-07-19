@@ -1,92 +1,94 @@
+import hashlib
+import bisect
+import requests
+import random
 from flask import Flask, request, jsonify
-import docker
-from consistent_hash import ConsistentHashMap  # Assuming ConsistentHashMap is implemented in consistent_hash.py
 
 app = Flask(__name__)
-client = docker.from_env()
 
-# Example parameters for consistent hashing
-num_servers = 10
-num_slots = 100
-num_virtual_servers = 1
+class ConsistentHashing:
+    def __init__(self, replicas=3):
+        self.replicas = replicas
+        self.ring = []
+        self.nodes = {}
 
-hash_ring = ConsistentHashMap(num_servers, num_slots, num_virtual_servers)
+    def _hash(self, key):
+        return int(hashlib.md5(key.encode('utf-8')).hexdigest(), 16)
 
-servers = []
+    def add_node(self, node):
+        for i in range(self.replicas):
+            key = self._hash(f"{node}-{i}")
+            self.ring.append(key)
+            self.nodes[key] = node
+        self.ring.sort()
 
-def start_server(server_id):
-    container = client.containers.run(
-        "web_server",
-        environment={"SERVER_ID": server_id},
-        detach=True,
-        name=server_id
-    )
-    return container
+    def remove_node(self, node):
+        for i in range(self.replicas):
+            key = self._hash(f"{node}-{i}")
+            self.ring.remove(key)
+            del self.nodes[key]
 
-def stop_server(container):
-    container.stop()
-    container.remove()
+    def get_node(self, key):
+        if not self.ring:
+            return None
+        hash_key = self._hash(key)
+        idx = bisect.bisect(self.ring, hash_key)
+        if idx == len(self.ring):
+            idx = 0
+        return self.nodes[self.ring[idx]]
 
-@app.route('/rep', methods=['GET'])
-def get_replicas():
-    return jsonify({
-        "N": len(servers),
-        "replicas": servers
-    }), 200
+class LoadBalancer:
+    def __init__(self):
+        self.servers = []
+        self.consistent_hash = ConsistentHashing()
 
-@app.route('/add', methods=['POST'])
-def add_replicas():
-    data = request.json
-    num_instances = data.get("n", 1)
-    hostnames = data.get("hostnames", [])
+    def add_server(self, server):
+        self.servers.append(server)
+        self.consistent_hash.add_node(server)
 
-    new_servers = []
-    for i in range(num_instances):
-        server_id = hostnames[i] if i < len(hostnames) else f"Server_{len(servers) + i + 1}"
-        container = start_server(server_id)
-        hash_ring.add_server(server_id)
-        servers.append(server_id)
-        new_servers.append(server_id)
-    
-    return jsonify({
-        "message": {
-            "N": len(servers),
-            "replicas": servers
-        },
-        "status": "successful"
-    }), 200
+    def remove_server(self, server):
+        self.servers.remove(server)
+        self.consistent_hash.remove_node(server)
 
-@app.route('/rm', methods=['DELETE'])
-def remove_replicas():
-    data = request.json
-    num_instances = data.get("n", 1)
-    hostnames = data.get("hostnames", [])
+    def get_server(self, key):
+        return self.consistent_hash.get_node(key)
 
-    for i in range(num_instances):
-        if hostnames and i < len(hostnames):
-            server_id = hostnames[i]
-        else:
-            server_id = servers.pop()
-        
-        hash_ring.remove_server(server_id)
-        container = client.containers.get(server_id)
-        stop_server(container)
-        servers.remove(server_id)
-    
-    return jsonify({
-        "message": {
-            "N": len(servers),
-            "replicas": servers
-        },
-        "status": "successful"
-    }), 200
+load_balancer = LoadBalancer()
 
-@app.route('/<path:path>', methods=['GET'])
-def proxy_request(path):
-    server_id = hash_ring.get_server(path)
-    server_container = client.containers.get(server_id)
-    # You will need to implement the request forwarding logic here.
-    return jsonify({"message": f"Request forwarded to {server_id}"}), 200
+@app.route('/add_server', methods=['POST'])
+def add_server():
+    server = request.json['server']
+    load_balancer.add_server(server)
+    return jsonify({'status': 'success', 'message': f'Server {server} added.'})
+
+@app.route('/remove_server', methods=['POST'])
+def remove_server():
+    server = request.json['server']
+    load_balancer.remove_server(server)
+    return jsonify({'status': 'success', 'message': f'Server {server} removed.'})
+
+@app.route('/get_server', methods=['GET'])
+def get_server():
+    key = request.args.get('key')
+    server = load_balancer.get_server(key)
+    return jsonify({'server': server})
+
+@app.route('/request', methods=['POST'])
+def handle_request():
+    key = request.json['key']
+    server = load_balancer.get_server(key)
+    if server:
+        try:
+            response = requests.post(f"http://{server}/process", json=request.json)
+            return jsonify(response.json())
+        except requests.exceptions.RequestException:
+            return jsonify({'status': 'error', 'message': f'Failed to connect to server {server}.'})
+    return jsonify({'status': 'error', 'message': 'No available servers.'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Adding some initial servers for demonstration
+    initial_servers = ['127.0.0.1:5001', '127.0.0.1:5002', '127.0.0.1:5003']
+    for server in initial_servers:
+        load_balancer.add_server(server)
+    
+    app.run(port=5000)
