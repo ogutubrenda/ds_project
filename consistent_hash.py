@@ -1,76 +1,79 @@
 import math
 
 class ConsistentHashMap:
-    def __init__(self, num_servers, num_slots, num_virtual_servers):
-        self.num_servers = num_servers
-        self.num_slots = num_slots
-        self.num_virtual_servers = num_virtual_servers
-        self.slots = [-1] * num_slots
-        self.server_map = {}
+    def __init__(self, N, M, K):
+        self.N = N  # Number of server containers managed by the load balancer
+        self.M = M  # Total number of slots in the consistent hash map
+        self.K = K  # Number of virtual servers for each server container
 
-        self._initialize_virtual_servers()
+        self.server_containers = [f'S{i}' for i in range(1, N + 1)]
+        self.virtual_servers = self.generate_virtual_servers()
 
-    def _hash_request(self, request_id):
-        return (request_id + (2 ** request_id) + 17) % self.num_slots
+        # Initialize the hash map
+        self.hash_map = {slot: None for slot in range(M)}
 
-    def _hash_virtual_server(self, server_id, virtual_id):
-    server_id_str = str(server_id)
-    virtual_id_str = str(virtual_id)
-    return (server_id_str + virtual_id_str + str(2 ** virtual_id) + str(25)) % self.num_slots
+    def generate_virtual_servers(self):
+        virtual_servers = []
+        for i in range(1, self.N + 1):
+            for j in range(self.K):
+                virtual_servers.append(f'S{i}_{j}')
+        return virtual_servers
 
-    def _initialize_virtual_servers(self):
-        for server_id in range(self.num_servers):
-            self.server_map[server_id] = []
-            for virtual_id in range(self.num_virtual_servers):
-                slot = self._hash_virtual_server(server_id, virtual_id)
-                while self.slots[slot] != -1:
-                    slot = (slot + 1) % self.num_slots  # Linear probing for collision resolution
-                self.slots[slot] = server_id
-                self.server_map[server_id].append(slot)
+    def h(self, Rid):
+        return (Rid + 2 * Rid + 17) % self.M
 
-    def add_server(self, new_server_id):
-        self.server_map[new_server_id] = []
-        for virtual_id in range(self.num_virtual_servers):
-            slot = self._hash_virtual_server(new_server_id, virtual_id)
-            while self.slots[slot] != -1:
-                slot = (slot + 1) % self.num_slots  # Linear probing for collision resolution
-            self.slots[slot] = new_server_id
-            self.server_map[new_server_id].append(slot)
+    def phi(self, Sid, j):
+        return (Sid + j + 2 * j + 25) % self.M
 
-    def remove_server(self, server_id):
-        for slot in self.server_map[server_id]:
-            self.slots[slot] = -1
-        del self.server_map[server_id]
+    def add_server(self, Sid):
+        for j in range(self.K):
+            slot = self.phi(Sid, j)
+            while self.hash_map[slot] is not None:
+                slot = (slot + 1) % self.M
+            self.hash_map[slot] = f'S{Sid}_{j}'
 
-    def get_server_for_request(self, request_id):
-        request_slot = self._hash_request(request_id)
-        for i in range(self.num_slots):
-            slot = (request_slot + i) % self.num_slots
-            if self.slots[slot] != -1:
-                return self.slots[slot]
-        return None
+    def remove_server(self, Sid):
+        for j in range(self.K):
+            virtual_server = f'S{Sid}_{j}'
+            for slot, value in self.hash_map.items():
+                if value == virtual_server:
+                    self.hash_map[slot] = None
+                    break
 
-# Example Usage:
+    def map_request(self, Rid):
+        slot = self.h(Rid)
+        while self.hash_map[slot] is None:
+            slot = (slot + 1) % self.M
+        return self.hash_map[slot]
+
+
+def main():
+    # Initialize Consistent Hash Map
+    N = 3  # Number of server containers managed by the load balancer
+    M = 512  # Total number of slots in the consistent hash map
+    K = 9  # Number of virtual servers for each server container
+    chm = ConsistentHashMap(N, M, K)
+
+    # Add servers to the hash map
+    for i in range(1, N + 1):
+        chm.add_server(i)
+
+    # Map requests to servers
+    requests = [132574, 237891, 982345, 674512, 876234, 543289]
+    for Rid in requests:
+        server = chm.map_request(Rid)
+        print(f"Request {Rid} mapped to server {server}")
+
+    # Simulate server failure
+    failed_server = 1
+    chm.remove_server(failed_server)
+    print(f"Server {failed_server} failed")
+
+    # Map requests again after server failure
+    for Rid in requests:
+        server = chm.map_request(Rid)
+        print(f"Request {Rid} mapped to server {server}")
+
+
 if __name__ == "__main__":
-    num_servers = 3
-    num_slots = 512
-    num_virtual_servers = 9
-
-    hash_map = ConsistentHashMap(num_servers, num_slots, num_virtual_servers)
-
-    # Adding a new server
-    hash_map.add_server(3)
-
-    # Removing a server
-    hash_map.remove_server(2)
-
-    # Getting the server for a request
-    request_id = 132574
-    assigned_server = hash_map.get_server_for_request(request_id)
-    print(f"Request {request_id} is handled by server {assigned_server}")
-
-    # Debugging output to see slot assignments
-    print("Slot assignments:")
-    for i, server in enumerate(hash_map.slots):
-        if server != -1:
-            print(f"Slot {i} -> Server {server}")
+    main()
