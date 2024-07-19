@@ -1,6 +1,6 @@
 # README
 
-## Customizable Load Balancer for Distributed Systems Project
+## Customizable Load Balancer for Distributed Systems 
 
 ### 128099 Brenda Ogutu
 ### 145353 Yvonne Ndambiri

@@ -1,9 +1,18 @@
+# Use the official lightweight Python image
 FROM python:3.8-slim
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set the working directory in the container
 WORKDIR /app
 
-COPY load_balancer.py consistent_hash.py /app/
+# Copy all files to the working directory
+COPY . .
 
-RUN pip install flask docker
+# Install any dependencies
+RUN pip install Flask --no-cache-dir -r requirements.txt
 
-CMD ["python", "load_balancer.py"]
+# Command to run on container start
+CMD [ "python", "./app.py", "&", "python", "./load_balancer.py" ]

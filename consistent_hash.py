@@ -1,6 +1,3 @@
-import hashlib
-import bisect
-
 class ConsistentHashMap:
     def __init__(self, N, M, K):
         self.N = N  # Number of server containers managed by the load balancer
