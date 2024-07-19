@@ -69,7 +69,7 @@ This project implements a customizable load balancer designed to route asynchron
 3. **Run the Docker Containers**:
    ```bash
    docker-compse up
-4. **Set up Environment Variables**
+4. **Set up Environment Variables**: 
 Refer to the system components
    
 
