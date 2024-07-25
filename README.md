@@ -58,12 +58,13 @@ This project implements a customizable load balancer designed to route asynchron
 2. Uniform Load Distribution: Assumes client requests are uniformly distributed. If requests skew towards specific keys, additional mechanisms might be needed for effective load balancing.
 3. Server Homogeneity: Assumes all servers have similar capabilities and performance characteristics to ensure uniformity and predictability in handling requests.
 
-## Task Analysis
+Task Analysis
 A-1: Distribution of Load Among Server Containers (N = 3)
-
 Experiment:
+
 Launched 10,000 asynchronous requests to a load balancer with 3 server containers.
 Output:
+
 Generated a bar chart showing the number of requests handled by each server instance.
 Observations:
 
@@ -74,8 +75,12 @@ Explanation:
 Balanced Distribution: If the chart shows roughly equal bars, it indicates that the load balancer is effectively distributing requests across the available servers.
 Performance View: A balanced distribution suggests that the load balancer implementation is functioning as expected for a small number of servers. If there is significant imbalance, it could point to potential issues in the load balancing algorithm.
 A-2: Scalability with Incremental N (2 to 6)
-Experiment: Incremented the number of server containers (N) from 2 to 6 and launched 10,000 requests for each increment.
-Output: Created a line chart showing the average load per server for different values of N.
+Experiment:
+
+Incremented the number of server containers (N) from 2 to 6 and launched 10,000 requests for each increment.
+Output:
+
+Created a line chart showing the average load per server for different values of N.
 Observations:
 
 Line Chart: The line chart shows the average number of requests handled per server as N increases.
@@ -84,10 +89,13 @@ Explanation:
 
 Scalability: A decreasing trend in the average load per server with increasing N indicates good scalability. This means the load balancer effectively manages the load as more servers are added.
 Performance View: If the average load per server remains relatively constant or decreases as expected, it suggests that the load balancer scales well with the number of server containers.
-
 A-3: Response to Server Failure
-Experiment: Tested all endpoints of the load balancer and simulated a server failure by killing the process on a specific port.
-Output: Observed how the load balancer handles the failure and whether it quickly spawns a new instance to handle the load.
+Experiment:
+
+Tested all endpoints of the load balancer and simulated a server failure by killing the process on a specific port.
+Output:
+
+Observed how the load balancer handles the failure and whether it quickly spawns a new instance to handle the load.
 Observations:
 
 Server Failure Handling: After simulating a failure, the load balancer should detect the unavailability of the server and redirect requests to available servers. Ideally, it should also spawn new instances if configured to do so.
@@ -96,11 +104,13 @@ Explanation:
 
 Recovery Speed: A quick recovery and continued operation indicate that the load balancer is robust and responsive to server failures.
 Performance View: Effective failure handling demonstrates resilience and reliability of the load balancer in maintaining service availability.
-
-
 A-4: Observations with Modified Hash Functions
-Experiment:Modified the hash functions H(i) and Φ(i, j) and repeated the experiments from A-1 and A-2.
-Output: Reported observations based on changes to hash functions.
+Experiment:
+
+Modified the hash functions H(i) and Φ(i, j) and repeated the experiments from A-1 and A-2.
+Output:
+
+Reported observations based on changes to hash functions.
 Observations:
 
 Hash Function Impact: Changes in hash functions can affect how requests are distributed across servers. Analyzing the results of A-1 and A-2 with modified hash functions can reveal if the load distribution has improved or worsened.
