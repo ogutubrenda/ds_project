@@ -71,6 +71,7 @@ Generated a bar chart showing the number of requests handled by each server inst
 Observations:
 
 Bar Chart: The bar chart displays the distribution of requests among the three server containers.
+
 Outcome: The load was distributed fairly evenly across the three servers.
 
 Explanation:
@@ -89,7 +90,9 @@ Created a line chart showing the average load per server for different values of
 Observations:
 
 Line Chart: The line chart shows the average number of requests handled per server as N increases.
+
 Expected Outcome: As N increases, the average load per server should decrease, assuming the load balancer distributes requests evenly.
+
 Explanation:
 
 Scalability: A decreasing trend in the average load per server with increasing N indicates good scalability. This means the load balancer effectively manages the load as more servers are added.
