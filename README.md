@@ -116,25 +116,7 @@ Explanation:
 
 Recovery Speed: A quick recovery and continued operation indicate that the load balancer is robust and responsive to server failures.
 Performance View: Effective failure handling demonstrates resilience and reliability of the load balancer in maintaining service availability.
-## A-4: Observations with Modified Hash Functions
-Experiment:
 
-Modified the hash functions H(i) and Φ(i, j) and repeated the experiments from A-1 and A-2.
-
-Output:
-
-Reported observations based on changes to hash functions.
-
-Observations:
-
-Hash Function Impact: Changes in hash functions can affect how requests are distributed across servers. Analyzing the results of A-1 and A-2 with modified hash functions can reveal if the load distribution has improved or worsened.
-
-Expected Outcome: Depending on the new hash functions, the distribution of requests might become more or less balanced.
-
-Explanation:
-
-Hash Function Effectiveness: Effective hash functions should ideally lead to more balanced distribution and better scalability. Observing how the distribution and scalability change with different hash functions provides insights into the impact of these functions on the load balancer's performance.
-Performance View: Analyzing the results helps in understanding the impact of hash functions on load distribution and identifying optimal hash functions for improved performance.
 
 ### Steps
 1. **Clone the Repository**:
