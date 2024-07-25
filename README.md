@@ -63,6 +63,7 @@ This project implements a customizable load balancer designed to route asynchron
 Experiment:
 
 Launched 10,000 asynchronous requests to a load balancer with 3 server containers.
+
 Output:
 
 Generated a bar chart showing the number of requests handled by each server instance.
