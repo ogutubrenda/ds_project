@@ -63,7 +63,8 @@ A-1: Distribution of Load Among Server Containers (N = 3)
 
 Experiment:
 Launched 10,000 asynchronous requests to a load balancer with 3 server containers.
-Output: Generated a bar chart showing the number of requests handled by each server instance.
+Output:
+Generated a bar chart showing the number of requests handled by each server instance.
 Observations:
 
 Bar Chart: The bar chart displays the distribution of requests among the three server containers.
